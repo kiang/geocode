@@ -394,20 +394,19 @@ class GeocodableBehavior extends ModelBehavior {
 			$model->escapeField($settings['fields']['latitude']),
 			$model->escapeField($settings['fields']['longitude']),
 		);
-		$earthRadiusKm = 6371;
 
-		$expression = '(' . $earthRadiusKm . ' * 2 * ATAN2(
-			SQRT(
-				SIN(RADIANS(' . $latitude . ' - ' . $latitudeField . ')/2) * SIN(RADIANS(' . $latitude . ' - ' . $latitudeField . ')/2) +
-				SIN(RADIANS(' . $longitude . ' - ' . $longitudeField . ')/2) * SIN(RADIANS(' . $longitude . ' - ' . $longitudeField . ')/2) *
-				COS(RADIANS(' . $latitude . ')) * COS(RADIANS(' . $longitude . '))
-			),
-			SQRT(1 - (
-				SIN(RADIANS(' . $latitude . ' - ' . $latitudeField . ')/2) * SIN(RADIANS(' . $latitude . ' - ' . $latitudeField . ')/2) +
-				SIN(RADIANS(' . $longitude . ' - ' . $longitudeField . ')/2) * SIN(RADIANS(' . $longitude . ' - ' . $longitudeField . ')/2) *
-				COS(RADIANS(' . $latitude . ')) * COS(RADIANS(' . $longitude . '))
-			))
-		) * ' . $this->units[strtolower($unit)] . ')';
+		/*
+		 * Calculate the distance based on the method of following url
+		 * http://snippets.dzone.com/posts/show/4991
+		 */
+		$expression = 'SQRT(
+			POW((COS(RADIANS(' . $latitude . ')) * COS(RADIANS(' . $longitude . '))
+			- COS(RADIANS(' . $latitudeField . ')) * COS(RADIANS(' . $longitudeField . '))), 2) +
+			POW((COS(RADIANS(' . $latitude . ')) * SIN(RADIANS(' . $longitude . '))
+			- COS(RADIANS(' . $latitudeField . ')) * SIN(RADIANS(' . $longitudeField . '))), 2) +
+			POW((SIN(RADIANS(' . $latitude . '))
+			- SIN(RADIANS(' . $latitudeField . '))), 2)
+		)';
 
 		$expression = str_replace("\n", ' ', $expression);
 		$query = array(
@@ -419,7 +418,10 @@ class GeocodableBehavior extends ModelBehavior {
 		);
 
 		if (!empty($distance)) {
-			$query['conditions'][] = $expression . ' <= ' . $distance;
+		    $earthRadiusKm = 6378;
+			$query['conditions'][] = $expression . ' * ' .
+			($earthRadiusKm * $this->units[strtolower($unit)]) .
+			' <= ' . $distance;
 		}
 
 		return $query;
