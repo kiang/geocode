@@ -369,7 +369,7 @@ class GeocodableBehavior extends ModelBehavior {
 			deg2rad($point2[1] - $point1[1])
 		);
 		$angle = sin($line[0]/2) * sin($line[0]/2) + sin($line[1]/2) * sin($line[1]/2) * cos(deg2rad($point1[0])) * cos(deg2rad($point2[0]));
-		$earthRadiusKm = 6371;
+		$earthRadiusKm = 6378;
 		return ($earthRadiusKm * 2 * atan2(sqrt($angle), sqrt(1 - $angle))) * $this->units[strtolower($unit)];
 	}
 
@@ -418,10 +418,9 @@ class GeocodableBehavior extends ModelBehavior {
 		);
 
 		if (!empty($distance)) {
-		    $earthRadiusKm = 6378;
-			$query['conditions'][] = $expression . ' * ' .
-			($earthRadiusKm * $this->units[strtolower($unit)]) .
-			' <= ' . $distance;
+			$earthRadiusKm = 6378;
+			$ratio = $earthRadiusKm * $this->units[strtolower($unit)];
+			$query['conditions'][] = '(' . $expression . ' * ' . $ratio . ') <= ' . $distance;
 		}
 
 		return $query;
